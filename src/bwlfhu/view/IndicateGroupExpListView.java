@@ -55,17 +55,16 @@ public class IndicateGroupExpListView extends ExpandableListView implements AbsL
             return;
         }
 
-        int nPos = view.pointToPosition(0, 0);
-        if (nPos == AdapterView.INVALID_POSITION)
+        if (firstVisibleItem == AdapterView.INVALID_POSITION)
         {
             return;
         }
 
-        long pos = getExpandableListPosition(nPos);
-        int childPos = ExpandableListView.getPackedPositionChild(pos);
-        if (childPos == AdapterView.INVALID_POSITION)
+        long pos = getExpandableListPosition(firstVisibleItem);
+        int type = getPackedPositionType(pos);
+        if (type == PACKED_POSITION_TYPE_GROUP)
         {
-            View groupView = getChildAt(nPos - getFirstVisiblePosition());
+            View groupView = getChildAt(0);
             indicatorGroupHeight = groupView.getHeight();
             indicatorGroup.setVisibility(groupView.getTop() == 0 ? View.GONE : View.VISIBLE);
         }
@@ -79,7 +78,7 @@ public class IndicateGroupExpListView extends ExpandableListView implements AbsL
             return;
         }
 
-        int groupPos = ExpandableListView.getPackedPositionGroup(pos);
+        int groupPos = getPackedPositionGroup(pos);
         boolean groupExp = isGroupExpanded(groupPos);
         if (groupPos != indicatorGroupId || indicatorGroupExpanded != groupExp)
         {
@@ -106,18 +105,13 @@ public class IndicateGroupExpListView extends ExpandableListView implements AbsL
             return;
         }
 
+        int nEndPos = firstVisibleItem + 1;
         int showHeight = indicatorGroupHeight;
-        int nEndPos = pointToPosition(0, indicatorGroupHeight);
-        if (nEndPos == AdapterView.INVALID_POSITION)
-        {
-            return;
-        }
-
         long pos2 = getExpandableListPosition(nEndPos);
-        int groupPos2 = ExpandableListView.getPackedPositionGroup(pos2);
+        int groupPos2 = getPackedPositionGroup(pos2);
         if (groupPos2 != indicatorGroupId)
         {
-            View viewNext = getChildAt(nEndPos - getFirstVisiblePosition());
+            View viewNext = getChildAt(1);
             showHeight = viewNext.getTop();
         }
 
@@ -130,4 +124,50 @@ public class IndicateGroupExpListView extends ExpandableListView implements AbsL
     public void onScrollStateChanged(AbsListView view, int scrollState)
     {
     }
+
+    public void reloadGroupView(int groupPosition)
+    {
+        ExpandableListAdapter adapter = getExpandableListAdapter();
+        if (null == adapter)
+        {
+            return;
+        }
+
+        int nPos = getFirstVisiblePosition();
+        if (nPos == AdapterView.INVALID_POSITION)
+        {
+            return;
+        }
+
+        boolean isExpanded = isGroupExpanded(groupPosition);
+        for (; nPos < getLastVisiblePosition(); nPos++)
+        {
+            long pos = getExpandableListPosition(nPos);
+            int groupPos = getPackedPositionGroup(pos);
+            if (groupPos == groupPosition)
+            {
+                int type = getPackedPositionType(pos);
+                if (type == PACKED_POSITION_TYPE_GROUP)
+                {
+                    View groupView = getChildAt(nPos - getFirstVisiblePosition());
+                    adapter.getGroupView(groupPos, isGroupExpanded(groupPos), groupView, null);
+                    if (nPos != getFirstVisiblePosition())
+                    {
+                        break;
+                    }
+                }
+
+                if (null != indicatorGroup && nPos == getFirstVisiblePosition())
+                {
+                    View groupView = indicatorGroup.getChildAt(0);
+                    if (null != groupView)
+                    {
+                        adapter.getGroupView(groupPos, isExpanded, groupView, null);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+}
 }
